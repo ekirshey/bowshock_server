@@ -6,7 +6,7 @@ listener::
 listener(
     net::io_context& ioc,
     tcp::endpoint endpoint,
-    boost::shared_ptr<shared_state> const& state)
+    std::shared_ptr<shared_state> const& state)
     : ioc_(ioc)
     , acceptor_(ioc)
     , state_(state)
@@ -79,7 +79,7 @@ on_accept(beast::error_code ec, tcp::socket socket)
         return fail(ec, "accept");
     else
         // Launch a new session for this connection
-        boost::make_shared<websocket_session>(
+        std::make_shared<websocket_session>(
             std::move(socket),
             state_)->run();
 

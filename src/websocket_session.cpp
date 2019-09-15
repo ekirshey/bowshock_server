@@ -1,10 +1,11 @@
 #include "websocket_session.h"
+#include <nlohmann/json.hpp>
 #include <iostream>
 
 websocket_session::
 websocket_session(
     tcp::socket&& socket,
-    boost::shared_ptr<shared_state> const& state)
+    std::shared_ptr<shared_state> const& state)
     : ws_(std::move(socket))
     , state_(state)
 {
@@ -39,7 +40,7 @@ on_accept(beast::error_code ec)
 
     // Add this session to the list of active sessions
     state_->join(this);
-    std::cout << "got a new one" << std::endl;
+
     // Read a message
     ws_.async_read(
         buffer_,
@@ -57,7 +58,11 @@ on_read(beast::error_code ec, std::size_t)
         return fail(ec, "read");
 
     std::string data(beast::buffers_to_string(buffer_.data()));
-    std::cout << data << std::endl;
+
+    // Convert message to json
+    auto body = nlohmann::json::parse(data);
+    // MessageTypes
+
     // Send to all connections
     state_->send(data);
 
@@ -97,7 +102,7 @@ void websocket_session::run()
 
 void
 websocket_session::
-send(boost::shared_ptr<std::string const> const& ss)
+send(std::shared_ptr<std::string const> const& ss)
 {
     // Post our work to the strand, this ensures
     // that the members of `this` will not be
@@ -113,7 +118,7 @@ send(boost::shared_ptr<std::string const> const& ss)
 
 void
 websocket_session::
-on_send(boost::shared_ptr<std::string const> const& ss)
+on_send(std::shared_ptr<std::string const> const& ss)
 {
     // Always add to queue
     queue_.push_back(ss);

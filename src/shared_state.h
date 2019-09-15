@@ -1,6 +1,5 @@
 #pragma once
 
-#include <boost/smart_ptr.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
