@@ -14,7 +14,6 @@ class listener : public std::enable_shared_from_this<listener>
 {
     net::io_context& ioc_;
     tcp::acceptor acceptor_;
-    std::shared_ptr<shared_state> state_;
     std::shared_ptr<rooms> rooms_;
 
     void fail(beast::error_code ec, char const* what);
@@ -24,7 +23,7 @@ public:
     listener(
         net::io_context& ioc,
         tcp::endpoint endpoint,
-        std::shared_ptr<shared_state> const& state);
+        std::shared_ptr<rooms> const& rooms);
 
     // Start accepting incoming connections
     void run();

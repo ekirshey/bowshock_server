@@ -2,20 +2,20 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 
-websocket_session::
-websocket_session(
-    tcp::socket&& socket,
-    std::shared_ptr<shared_state> const& state)
+websocket_session::websocket_session( 
+                                    tcp::socket&& socket,
+                                    std::shared_ptr<rooms> const& rooms )
     : ws_(std::move(socket))
-    , state_(state)
+    , rooms_(rooms)
+    , current_user_("")
+    , current_room_("")
 {
 }
 
 websocket_session::
 ~websocket_session()
 {
-    // Remove this session from the list of active sessions
-    state_->leave(this);
+    // Leave room
 }
 
 void
@@ -38,8 +38,7 @@ on_accept(beast::error_code ec)
     if(ec)
         return fail(ec, "accept");
 
-    // Add this session to the list of active sessions
-    state_->join(this);
+    std::cout << " New connection accepted" << std::endl;
 
     // Read a message
     ws_.async_read(
@@ -59,12 +58,69 @@ on_read(beast::error_code ec, std::size_t)
 
     std::string data(beast::buffers_to_string(buffer_.data()));
 
+    // Make the business logic class!
     // Convert message to json
     auto body = nlohmann::json::parse(data);
     // MessageTypes
+    std::cout << " Parsing received message " << std::endl;
+    if ( body.at("message_type") == "create_room" )
+    {
+        std::string room_name = body.at("room_name");
+        std::string room_password = body.at("room_password");
+        std::string user_name = body.at("user_name");
+        std::string user_password = body.at("user_password");
+        auto res = rooms_->create_room( room_name, 
+                                        room_password, 
+                                        user_name, 
+                                        user_password );
+
+        if (res != ROOMS_STATUS::OK)
+        {
+            // report error to client
+        }
+        else 
+        {
+            if ( current_room_.size() != 0 )
+            {
+                // Remove from current room
+                rooms_->remove_from_room(current_room_, user_name, this);
+            }
+            current_user_ = user_name;
+            current_room_ = room_name;
+        }
+    }
+    else if ( body.at("message_type") == "join_room" )
+    {
+        std::string room_name = body.at("room_name");
+        std::string room_password = body.at("room_password");
+        std::string user_name = body.at("user_name");
+        std::string user_password = body.at("user_password");
+        auto res = rooms_->add_to_room( room_name, 
+                                        room_password, 
+                                        user_name,
+                                        user_password,
+                                        this);
+
+        if (res != ROOMS_STATUS::OK) 
+        {
+            // report error to client
+        }
+        else 
+        {
+            if ( current_room_.size() != 0 )
+            {
+                // Remove from current room
+                rooms_->remove_from_room(current_room_, user_name, this);
+            }
+
+            std::cout << " Added to room: " << room_name << " for user: " << user_name << std::endl;
+            current_user_ = user_name;
+            current_room_ = room_name;
+        }
+    }
 
     // Send to all connections
-    state_->send(data);
+    //state_->send(data);
 
     // Clear the buffer
     buffer_.consume(buffer_.size());
@@ -100,9 +156,7 @@ void websocket_session::run()
             shared_from_this()));
 }
 
-void
-websocket_session::
-send(std::shared_ptr<std::string const> const& ss)
+void websocket_session::send(std::shared_ptr<std::string const> const& ss)
 {
     // Post our work to the strand, this ensures
     // that the members of `this` will not be
@@ -116,9 +170,7 @@ send(std::shared_ptr<std::string const> const& ss)
             ss));
 }
 
-void
-websocket_session::
-on_send(std::shared_ptr<std::string const> const& ss)
+void websocket_session::on_send(std::shared_ptr<std::string const> const& ss)
 {
     // Always add to queue
     queue_.push_back(ss);
@@ -135,9 +187,7 @@ on_send(std::shared_ptr<std::string const> const& ss)
             shared_from_this()));
 }
 
-void
-websocket_session::
-on_write(beast::error_code ec, std::size_t)
+void websocket_session::on_write(beast::error_code ec, std::size_t)
 {
     // Handle the error, if any
     if(ec)

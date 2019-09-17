@@ -3,12 +3,14 @@
 #include "net.h"
 #include "beast.h"
 #include "shared_state.h"
+#include "rooms.h"
 
 #include <cstdlib>
 #include <memory>
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <optional>
 
 // Forward declaration
 class shared_state;
@@ -19,8 +21,12 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
 {
     beast::flat_buffer buffer_;
     websocket::stream<beast::tcp_stream> ws_;
-    std::shared_ptr<shared_state> state_;
-    std::unordered_map< std::string, std::shared_ptr<shared_state> > rooms_;
+    std::shared_ptr<rooms> rooms_;
+
+    // How do i know if the websocket has joined a room?
+    std::string current_user_;//?
+    std::string current_room_;
+    
     std::vector<std::shared_ptr<std::string const>> queue_;
 
     void fail(beast::error_code ec, char const* what);
@@ -31,7 +37,7 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
 public:
     websocket_session(
         tcp::socket&& socket,
-        std::shared_ptr<shared_state> const& state);
+        std::shared_ptr<rooms> const& rooms);
 
     ~websocket_session();
 

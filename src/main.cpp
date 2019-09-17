@@ -1,5 +1,6 @@
 #include "listener.h"
 #include "shared_state.h"
+#include "rooms.h"
 
 #include <boost/asio/signal_set.hpp>
 #include <boost/smart_ptr.hpp>
@@ -30,7 +31,7 @@ int main(int argc, char* argv[])
     std::make_shared<listener>(
         ioc,
         tcp::endpoint{ address, port },
-        std::make_shared<shared_state>())->run();
+        std::make_shared<rooms>() )->run();
 
     // Capture SIGINT and SIGTERM to perform a clean shutdown
     net::signal_set signals(ioc, SIGINT, SIGTERM);
