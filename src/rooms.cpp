@@ -97,7 +97,7 @@ void room::remove_session( const std::string& user_name,
     if (members_.find(user_name) != members_.end())
     {
         auto& v = members_[user_name];
-        int temp = members_[user_name].size();
+        size_t temp = members_[user_name].size();
         v.erase( std::remove(v.begin(), v.end(), session), v.end() );
         session_count_ -= (temp - members_[user_name].size());
     }
@@ -182,7 +182,7 @@ ROOMS_STATUS rooms::remove_from_room( const std::string& room_name,
     if (rooms_.find(room_name) == rooms_.end())
         return ROOMS_STATUS::UNKNOWN_ROOM;
     
-    rooms_[room_name].remove_member(user_name);
+    rooms_[room_name].remove_session(user_name, session);
 
     return ROOMS_STATUS::OK;
 }

@@ -15,7 +15,14 @@ websocket_session::websocket_session(
 websocket_session::
 ~websocket_session()
 {
+    std::cout << "Disconnect session" << std::endl;
     // Leave room
+    if (current_room_.size() != 0)
+    {
+        rooms_->remove_from_room( current_room_, 
+                                  current_user_,
+                                  this );
+    }
 }
 
 void
