@@ -114,6 +114,7 @@ void room::send( std::string message )
     std::vector<std::weak_ptr<websocket_session>> v;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        std::cout << "Clients to send to " << session_count_ << std::endl;
         v.reserve(session_count_);
         for (auto&[k, r] : members_)
         {

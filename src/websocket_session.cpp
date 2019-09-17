@@ -92,8 +92,17 @@ on_read(beast::error_code ec, std::size_t)
                 // Remove from current room
                 rooms_->remove_from_room(current_room_, user_name, this);
             }
-            current_user_ = user_name;
-            current_room_ = room_name;
+            // Created new room so add user to it
+            auto res = rooms_->add_to_room( room_name,
+                                            room_password,
+                                            user_name,
+                                            user_password,
+                                            this);
+            if (res == ROOMS_STATUS::OK)
+            {
+                current_user_ = user_name;
+                current_room_ = room_name;
+            }
         }
     }
     else if ( body.at("message_type") == "join_room" )
@@ -108,6 +117,7 @@ on_read(beast::error_code ec, std::size_t)
                                         user_password,
                                         this);
 
+        std::cout << "Add to room result: " << (int)res << std::endl;
         if (res != ROOMS_STATUS::OK) 
         {
             // report error to client
@@ -125,9 +135,11 @@ on_read(beast::error_code ec, std::size_t)
             current_room_ = room_name;
         }
     }
-
-    // Send to all connections
-    //state_->send(data);
+    else if ( current_room_.size() != 0 )
+    {
+        std::cout << "Routing normal message to room members" << std::endl;
+        rooms_->send_to_room(data, current_room_);
+    }
 
     // Clear the buffer
     buffer_.consume(buffer_.size());
