@@ -49,6 +49,8 @@ public:
 
     void send( std::string message );
 
+    size_t session_count() { return session_count_; }
+
 private:
 
     std::string room_name_;

@@ -200,12 +200,17 @@ ROOMS_STATUS rooms::remove_from_room( const std::string& room_name,
                                       const std::string& user_name,
                                       websocket_session* session )
 {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
+    // Unique lock in case of cleaning up room
+    std::unique_lock<std::shared_mutex> lock(mutex_);
 
     if (rooms_.find(room_name) == rooms_.end())
         return ROOMS_STATUS::UNKNOWN_ROOM;
-    
+
     rooms_[room_name].remove_session(user_name, session);
+
+    if (rooms_[room_name].session_count() <= 0 )
+        rooms_.erase(room_name);
+
 
     return ROOMS_STATUS::OK;
 }
