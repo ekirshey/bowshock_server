@@ -154,6 +154,19 @@ void room::send( std::string message )
             sp->send(ss);
 }
 
+std::vector<std::string> room::get_members()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::vector<std::string> members;
+    for (auto&[k, r] : members_)
+    {
+        members.push_back(k);
+    }
+
+    return members;
+}
+
 ////////////////////////////////////////////////////////
 
 rooms::rooms()
@@ -211,7 +224,6 @@ ROOMS_STATUS rooms::remove_from_room( const std::string& room_name,
     if (rooms_[room_name].session_count() <= 0 )
         rooms_.erase(room_name);
 
-
     return ROOMS_STATUS::OK;
 }
 
@@ -224,6 +236,19 @@ ROOMS_STATUS rooms::send_to_room( const std::string& message,
         return ROOMS_STATUS::UNKNOWN_ROOM;
 
     rooms_[room_name].send(message);
+
+    return ROOMS_STATUS::OK;
+}
+
+ROOMS_STATUS rooms::get_members(const std::string& room_name,
+                                std::vector<std::string>& members)
+{
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+
+    if (rooms_.find(room_name) == rooms_.end())
+        return ROOMS_STATUS::UNKNOWN_ROOM;
+
+    members = rooms_[room_name].get_members();
 
     return ROOMS_STATUS::OK;
 }

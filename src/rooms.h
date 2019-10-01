@@ -49,6 +49,8 @@ public:
 
     void send( std::string message );
 
+    std::vector<std::string> get_members();
+
     size_t session_count() { return session_count_; }
 
 private:
@@ -63,6 +65,7 @@ private:
 
     size_t session_count_;
 
+    // Username, Password
     std::unordered_map< std::string, std::string > users_;
     std::unordered_map< std::string, std::vector< websocket_session* > > members_;
 };
@@ -89,6 +92,9 @@ public:
 
     ROOMS_STATUS send_to_room( const std::string& message,
                                const std::string& room_name);
+
+    ROOMS_STATUS get_members(const std::string& room_name,
+                             std::vector<std::string>& members);
 
 private:
     std::shared_mutex mutex_;

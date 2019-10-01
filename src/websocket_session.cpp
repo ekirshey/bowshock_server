@@ -163,12 +163,14 @@ on_read(beast::error_code ec, std::size_t)
             current_user_ = user_name;
             current_room_ = room_name;
 
-            // Probably should switch to protobufs or something
+            std::vector<std::string> members;
+            rooms_->get_members(current_room_, members);
             // Send OK message to client
             resp = {
                 {"type" , "join_room"},
                 {"user_name" , user_name},
                 {"room_name" , room_name},
+                {"members", members},
                 {"result" , status_string(res)}
             };
         }
