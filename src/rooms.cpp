@@ -3,6 +3,28 @@
 
 #include <iostream>
 
+std::string status_string(const ROOMS_STATUS& status)
+{
+    switch (status)
+    {
+        case ROOMS_STATUS::OK:
+            return "OK";
+        case ROOMS_STATUS::UNKNOWN_ROOM:
+            return "UNKNOWN_ROOM";
+        case ROOMS_STATUS::DUPLICATE_ROOM:
+            return "DUPLICATE_ROOM";
+        case ROOMS_STATUS::INVALID_ROOM_PASSWORD:
+            return "INVALID_ROOM_PASSWORD";
+        case ROOMS_STATUS::INVALID_USER:
+            return "INVALID_USER";
+        case ROOMS_STATUS::INVALID_USER_PASSWORD:
+            return "INVALID_USER_PASSWORD";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+
 room::room()
 {
 

@@ -23,6 +23,8 @@ enum class ROOMS_STATUS { OK,
                           INVALID_USER,
                           INVALID_USER_PASSWORD };
 
+std::string status_string(const ROOMS_STATUS& status);
+
 // Probably should be in a database...
 class room {
 public:

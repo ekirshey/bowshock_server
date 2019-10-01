@@ -60,7 +60,7 @@ websocket_session::
 on_read(beast::error_code ec, std::size_t)
 {
     // Handle the error, if any
-    if(ec)
+    if (ec)
         return fail(ec, "read");
 
     std::string data(beast::buffers_to_string(buffer_.data()));
@@ -70,61 +70,90 @@ on_read(beast::error_code ec, std::size_t)
     auto body = nlohmann::json::parse(data);
     // MessageTypes
     std::cout << " Parsing received message " << std::endl;
-    if ( body.at("message_type") == "create_room" )
+    if (body.at("message_type") == "create_room")
     {
+        nlohmann::json resp;
         std::string room_name = body.at("room_name");
         std::string room_password = body.at("room_password");
         std::string user_name = body.at("user_name");
         std::string user_password = body.at("user_password");
-        auto res = rooms_->create_room( room_name, 
-                                        room_password, 
-                                        user_name, 
-                                        user_password );
+        auto res = rooms_->create_room(room_name,
+            room_password,
+            user_name,
+            user_password);
 
         if (res != ROOMS_STATUS::OK)
         {
             // report error to client
+            resp = {
+                {"type" , "create_room"},
+                {"user_name" , user_name},
+                {"room_name" , room_name},
+                {"result" , "FAIL"},
+                {"error", status_string(res)}
+            };
         }
-        else 
+        else
         {
-            if ( current_room_.size() != 0 )
+            if (current_room_.size() != 0)
             {
                 // Remove from current room
                 rooms_->remove_from_room(current_room_, user_name, this);
             }
             // Created new room so add user to it
-            auto res = rooms_->add_to_room( room_name,
-                                            room_password,
-                                            user_name,
-                                            user_password,
-                                            this);
+            auto res = rooms_->add_to_room(room_name,
+                room_password,
+                user_name,
+                user_password,
+                this);
             if (res == ROOMS_STATUS::OK)
             {
                 current_user_ = user_name;
                 current_room_ = room_name;
             }
+
+            // Send OK message to client
+            resp = {
+                {"type" , "create_room"},
+                {"user_name" , user_name},
+                {"room_name" , room_name},
+                {"result" , status_string(res)},
+            };
         }
+
+        auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
+        send(ss);
     }
-    else if ( body.at("message_type") == "join_room" )
+    else if (body.at("message_type") == "join_room")
     {
+        nlohmann::json resp;
+
         std::string room_name = body.at("room_name");
         std::string room_password = body.at("room_password");
         std::string user_name = body.at("user_name");
         std::string user_password = body.at("user_password");
-        auto res = rooms_->add_to_room( room_name, 
-                                        room_password, 
-                                        user_name,
-                                        user_password,
-                                        this);
+        auto res = rooms_->add_to_room(room_name,
+            room_password,
+            user_name,
+            user_password,
+            this);
 
         std::cout << "Add to room result: " << (int)res << std::endl;
-        if (res != ROOMS_STATUS::OK) 
+
+        if (res != ROOMS_STATUS::OK)
         {
             // report error to client
+            resp = {
+               {"type" , "join_room"},
+               {"user_name" , user_name},
+               {"room_name" , room_name},
+               {"result" , "FAIL"},
+               {"error", status_string(res)}
+            };
         }
-        else 
+        else
         {
-            if ( current_room_.size() != 0 )
+            if (current_room_.size() != 0)
             {
                 // Remove from current room
                 rooms_->remove_from_room(current_room_, user_name, this);
@@ -133,7 +162,46 @@ on_read(beast::error_code ec, std::size_t)
             std::cout << " Added to room: " << room_name << " for user: " << user_name << std::endl;
             current_user_ = user_name;
             current_room_ = room_name;
+
+            // Probably should switch to protobufs or something
+            // Send OK message to client
+            resp = {
+                {"type" , "join_room"},
+                {"user_name" , user_name},
+                {"room_name" , room_name},
+                {"result" , status_string(res)}
+            };
         }
+
+        auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
+        send(ss);
+    }
+    else if (body.at("message_type") == "leave_room")
+    {
+        nlohmann::json resp;
+        if (current_room_.size() != 0)
+        {
+            // How do I handle the owner leaving?
+            auto res = rooms_->remove_from_room( current_room_,
+                                                 current_user_,
+                                                 this);
+            current_user_ = "";
+            current_room_ = "";
+
+            resp = {
+                {"type" , "leave_room"},
+                {"result" , status_string(res)}
+            };
+        }
+        else {
+            resp = {
+                {"type" , "leave_room"},
+                {"result" , "NOT_IN_ROOM"}
+            };
+        }
+
+        auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
+        send(ss);
     }
     else if ( current_room_.size() != 0 )
     {

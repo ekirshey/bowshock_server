@@ -24,7 +24,7 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
     std::shared_ptr<rooms> rooms_;
 
     // How do i know if the websocket has joined a room?
-    std::string current_user_;//?
+    std::string current_user_;
     std::string current_room_;
     
     std::vector<std::shared_ptr<std::string const>> queue_;
