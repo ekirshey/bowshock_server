@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shared_state.h"
+#include "server_schema.h"
 #include <mutex>
 #include <shared_mutex>
 #include <memory>
@@ -16,15 +17,6 @@ struct User {
 }
 */
 
-enum class ROOMS_STATUS { OK, 
-                          UNKNOWN_ROOM,
-                          DUPLICATE_ROOM, 
-                          INVALID_ROOM_PASSWORD,
-                          INVALID_USER,
-                          INVALID_USER_PASSWORD };
-
-std::string status_string(const ROOMS_STATUS& status);
-
 // Probably should be in a database...
 class room {
 public:
@@ -37,7 +29,7 @@ public:
     room( room& r );
     room& operator=( room& r );
    
-    ROOMS_STATUS add_member( const std::string& room_password,
+    SERVER_STATUS add_member( const std::string& room_password,
                              const std::string& user_name,
                              const std::string& user_password,
                              websocket_session* session );
@@ -75,26 +67,26 @@ public:
     explicit rooms();
 
     // Create room then join it
-    ROOMS_STATUS create_room( const std::string& room_name,
+    SERVER_STATUS create_room(const std::string& room_name,
                               const std::string& room_password, 
                               const std::string& admin,
-                              const std::string& admin_password );
+                              const std::string& admin_password);
 
-    ROOMS_STATUS add_to_room( const std::string& room_name,
+    SERVER_STATUS add_to_room(const std::string& room_name,
                               const std::string& room_password,
                               const std::string& user_name,
                               const std::string& user_password,
                               websocket_session* session );
 
-    ROOMS_STATUS remove_from_room( const std::string& room_name,
+    SERVER_STATUS remove_from_room(const std::string& room_name,
                                    const std::string& user_name,
-                                   websocket_session* session );
+                                   websocket_session* session);
 
-    ROOMS_STATUS send_to_room( const std::string& message,
+    SERVER_STATUS send_to_room(const std::string& message,
                                const std::string& room_name);
 
-    ROOMS_STATUS get_members(const std::string& room_name,
-                             std::vector<std::string>& members);
+    SERVER_STATUS get_members(const std::string& room_name,
+                              std::vector<std::string>& members);
 
 private:
     std::shared_mutex mutex_;

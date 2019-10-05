@@ -3,28 +3,6 @@
 
 #include <iostream>
 
-std::string status_string(const ROOMS_STATUS& status)
-{
-    switch (status)
-    {
-        case ROOMS_STATUS::OK:
-            return "OK";
-        case ROOMS_STATUS::UNKNOWN_ROOM:
-            return "UNKNOWN_ROOM";
-        case ROOMS_STATUS::DUPLICATE_ROOM:
-            return "DUPLICATE_ROOM";
-        case ROOMS_STATUS::INVALID_ROOM_PASSWORD:
-            return "INVALID_ROOM_PASSWORD";
-        case ROOMS_STATUS::INVALID_USER:
-            return "INVALID_USER";
-        case ROOMS_STATUS::INVALID_USER_PASSWORD:
-            return "INVALID_USER_PASSWORD";
-        default:
-            return "UNKNOWN";
-    }
-}
-
-
 room::room()
 {
 
@@ -72,7 +50,7 @@ room& room::operator=( room& r )
 If the user isn't in the set add it
 Otherwise check for the password and add new session
 */
-ROOMS_STATUS room::add_member( const std::string& room_password,
+SERVER_STATUS room::add_member( const std::string& room_password,
                                const std::string& user_name,
                                const std::string& user_password,
                                websocket_session* session )
@@ -85,7 +63,7 @@ ROOMS_STATUS room::add_member( const std::string& room_password,
         {
             if (users_[user_name] != user_password)
             {
-                return ROOMS_STATUS::INVALID_USER_PASSWORD;
+                return SERVER_STATUS::INVALID_USER_PASSWORD;
             }
             members_[user_name].emplace_back( session );
         }
@@ -97,10 +75,10 @@ ROOMS_STATUS room::add_member( const std::string& room_password,
         }
         
         session_count_++;
-        return ROOMS_STATUS::OK;
+        return SERVER_STATUS::OK;
     }
 
-    return ROOMS_STATUS::INVALID_ROOM_PASSWORD;
+    return SERVER_STATUS::INVALID_ROOM_PASSWORD;
 }
 
 void room::remove_member( const std::string& user_name)
@@ -174,7 +152,7 @@ rooms::rooms()
 
 }
 
-ROOMS_STATUS rooms::create_room( const std::string& room_name,
+SERVER_STATUS rooms::create_room( const std::string& room_name,
                                  const std::string& room_password, 
                                  const std::string& admin,
                                  const std::string& admin_password )
@@ -184,15 +162,15 @@ ROOMS_STATUS rooms::create_room( const std::string& room_name,
     {
         rooms_[room_name] = room(room_name, room_password, admin, admin_password);
         std::cout << " Created room: " << room_name << " for user: " << admin << std::endl;
-        return ROOMS_STATUS::OK;
+        return SERVER_STATUS::OK;
     }
     // How to convey to user that the room failed?
     // Should I have an error code instead of bool
-    return ROOMS_STATUS::DUPLICATE_ROOM;
+    return SERVER_STATUS::DUPLICATE_ROOM;
 }
 
 // Return shared_ptr to room?
-ROOMS_STATUS rooms::add_to_room( const std::string& room_name,
+SERVER_STATUS rooms::add_to_room( const std::string& room_name,
                                  const std::string& room_password,
                                  const std::string& user_name,
                                  const std::string& user_password,
@@ -201,7 +179,7 @@ ROOMS_STATUS rooms::add_to_room( const std::string& room_name,
     std::shared_lock<std::shared_mutex> lock(mutex_);
 
     if (rooms_.find(room_name) == rooms_.end())
-        return ROOMS_STATUS::UNKNOWN_ROOM;
+        return SERVER_STATUS::UNKNOWN_ROOM;
 
     return rooms_[room_name].add_member(room_password, 
                                         user_name,
@@ -209,7 +187,7 @@ ROOMS_STATUS rooms::add_to_room( const std::string& room_name,
                                         session );
 }
 
-ROOMS_STATUS rooms::remove_from_room( const std::string& room_name,
+SERVER_STATUS rooms::remove_from_room( const std::string& room_name,
                                       const std::string& user_name,
                                       websocket_session* session )
 {
@@ -217,38 +195,38 @@ ROOMS_STATUS rooms::remove_from_room( const std::string& room_name,
     std::unique_lock<std::shared_mutex> lock(mutex_);
 
     if (rooms_.find(room_name) == rooms_.end())
-        return ROOMS_STATUS::UNKNOWN_ROOM;
+        return SERVER_STATUS::UNKNOWN_ROOM;
 
     rooms_[room_name].remove_session(user_name, session);
 
     if (rooms_[room_name].session_count() <= 0 )
         rooms_.erase(room_name);
 
-    return ROOMS_STATUS::OK;
+    return SERVER_STATUS::OK;
 }
 
-ROOMS_STATUS rooms::send_to_room( const std::string& message,
+SERVER_STATUS rooms::send_to_room( const std::string& message,
                                   const std::string& room_name)
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
 
     if (rooms_.find(room_name) == rooms_.end())
-        return ROOMS_STATUS::UNKNOWN_ROOM;
+        return SERVER_STATUS::UNKNOWN_ROOM;
 
     rooms_[room_name].send(message);
 
-    return ROOMS_STATUS::OK;
+    return SERVER_STATUS::OK;
 }
 
-ROOMS_STATUS rooms::get_members(const std::string& room_name,
+SERVER_STATUS rooms::get_members(const std::string& room_name,
                                 std::vector<std::string>& members)
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
 
     if (rooms_.find(room_name) == rooms_.end())
-        return ROOMS_STATUS::UNKNOWN_ROOM;
+        return SERVER_STATUS::UNKNOWN_ROOM;
 
     members = rooms_[room_name].get_members();
 
-    return ROOMS_STATUS::OK;
+    return SERVER_STATUS::OK;
 }

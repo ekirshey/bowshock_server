@@ -70,7 +70,7 @@ on_read(beast::error_code ec, std::size_t)
     auto body = nlohmann::json::parse(data);
     // MessageTypes
     std::cout << " Parsing received message " << std::endl;
-    if (body.at("message_type") == "create_room")
+    if (body.at("message_type") == MESSAGE_TYPES::CREATE_ROOM)
     {
         nlohmann::json resp;
         std::string room_name = body.at("room_name");
@@ -82,18 +82,7 @@ on_read(beast::error_code ec, std::size_t)
             user_name,
             user_password);
 
-        if (res != ROOMS_STATUS::OK)
-        {
-            // report error to client
-            resp = {
-                {"type" , "create_room"},
-                {"user_name" , user_name},
-                {"room_name" , room_name},
-                {"result" , "FAIL"},
-                {"error", status_string(res)}
-            };
-        }
-        else
+        if (res == SERVER_STATUS::OK)
         {
             if (current_room_.size() != 0)
             {
@@ -106,25 +95,19 @@ on_read(beast::error_code ec, std::size_t)
                 user_name,
                 user_password,
                 this);
-            if (res == ROOMS_STATUS::OK)
+            if (res == SERVER_STATUS::OK)
             {
                 current_user_ = user_name;
                 current_room_ = room_name;
             }
-
-            // Send OK message to client
-            resp = {
-                {"type" , "create_room"},
-                {"user_name" , user_name},
-                {"room_name" , room_name},
-                {"result" , status_string(res)},
-            };
         }
+
+        resp = create_room_resp(user_name, room_name, res);
 
         auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
         send(ss);
     }
-    else if (body.at("message_type") == "join_room")
+    else if (body.at("message_type") == MESSAGE_TYPES::JOIN_ROOM)
     {
         nlohmann::json resp;
 
@@ -139,19 +122,8 @@ on_read(beast::error_code ec, std::size_t)
             this);
 
         std::cout << "Add to room result: " << (int)res << std::endl;
-
-        if (res != ROOMS_STATUS::OK)
-        {
-            // report error to client
-            resp = {
-               {"type" , "join_room"},
-               {"user_name" , user_name},
-               {"room_name" , room_name},
-               {"result" , "FAIL"},
-               {"error", status_string(res)}
-            };
-        }
-        else
+        std::vector<std::string> members;
+        if (res == SERVER_STATUS::OK)
         {
             if (current_room_.size() != 0)
             {
@@ -163,45 +135,30 @@ on_read(beast::error_code ec, std::size_t)
             current_user_ = user_name;
             current_room_ = room_name;
 
-            std::vector<std::string> members;
+            
             rooms_->get_members(current_room_, members);
-            // Send OK message to client
-            resp = {
-                {"type" , "join_room"},
-                {"user_name" , user_name},
-                {"room_name" , room_name},
-                {"members", members},
-                {"result" , status_string(res)}
-            };
         }
+
+        resp = join_room_resp(user_name, room_name, members, res);
 
         auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
         send(ss);
     }
-    else if (body.at("message_type") == "leave_room")
+    else if (body.at("message_type") == MESSAGE_TYPES::LEAVE_ROOM)
     {
         nlohmann::json resp;
+        SERVER_STATUS res = SERVER_STATUS::INVALID_USER;
         if (current_room_.size() != 0)
         {
             // How do I handle the owner leaving?
-            auto res = rooms_->remove_from_room( current_room_,
-                                                 current_user_,
-                                                 this);
+            res = rooms_->remove_from_room( current_room_,
+                                            current_user_,
+                                            this);
             current_user_ = "";
             current_room_ = "";
-
-            resp = {
-                {"type" , "leave_room"},
-                {"result" , status_string(res)}
-            };
-        }
-        else {
-            resp = {
-                {"type" , "leave_room"},
-                {"result" , "NOT_IN_ROOM"}
-            };
         }
 
+        resp = leave_room_resp(res);
         auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
         send(ss);
     }
