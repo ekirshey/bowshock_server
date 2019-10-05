@@ -57,3 +57,15 @@ nlohmann::json leave_room_resp(SERVER_STATUS result)
         { "result_str", status_string(result) }
     };
 }
+
+std::string member_update_msg(const std::string& room,
+                              const std::vector<std::string>& members)
+{
+    nlohmann::json req = {
+        {"type" , MESSAGE_TYPES::MEMBERS_UPDATE},
+        {"room" , room},
+        {"members", members}
+    };
+
+    return req.dump();
+}

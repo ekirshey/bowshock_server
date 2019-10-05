@@ -75,6 +75,7 @@ SERVER_STATUS room::add_member( const std::string& room_password,
         }
         
         session_count_++;
+        
         return SERVER_STATUS::OK;
     }
 
@@ -100,6 +101,13 @@ void room::remove_session( const std::string& user_name,
         size_t temp = members_[user_name].size();
         v.erase( std::remove(v.begin(), v.end(), session), v.end() );
         session_count_ -= (temp - members_[user_name].size());
+
+        // If member has no more sessions, remove it
+        if (members_[user_name].size() == 0) {
+            members_.erase(user_name);
+            users_.erase(user_name);
+        }
+
     }
 }
 
@@ -181,10 +189,19 @@ SERVER_STATUS rooms::add_to_room( const std::string& room_name,
     if (rooms_.find(room_name) == rooms_.end())
         return SERVER_STATUS::UNKNOWN_ROOM;
 
-    return rooms_[room_name].add_member(room_password, 
-                                        user_name,
-                                        user_password,
-                                        session );
+    auto res = rooms_[room_name].add_member(room_password, 
+                                            user_name,
+                                            user_password,
+                                            session );
+
+    // Inform all other members of the room
+    if (res == SERVER_STATUS::OK) {
+        auto members = rooms_[room_name].get_members();
+        auto req = member_update_msg(room_name, members);
+        rooms_[room_name].send(req);
+    }
+
+    return res;
 }
 
 SERVER_STATUS rooms::remove_from_room( const std::string& room_name,
@@ -199,8 +216,16 @@ SERVER_STATUS rooms::remove_from_room( const std::string& room_name,
 
     rooms_[room_name].remove_session(user_name, session);
 
-    if (rooms_[room_name].session_count() <= 0 )
+    if (rooms_[room_name].session_count() <= 0)
+    {
         rooms_.erase(room_name);
+    }
+    else {
+        // Inform all other members of the room
+        auto members = rooms_[room_name].get_members();
+        auto req = member_update_msg(room_name, members);
+        rooms_[room_name].send(req);
+    }
 
     return SERVER_STATUS::OK;
 }

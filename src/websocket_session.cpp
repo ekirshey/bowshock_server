@@ -95,6 +95,7 @@ on_read(beast::error_code ec, std::size_t)
                 user_name,
                 user_password,
                 this);
+
             if (res == SERVER_STATUS::OK)
             {
                 current_user_ = user_name;
@@ -125,9 +126,9 @@ on_read(beast::error_code ec, std::size_t)
         std::vector<std::string> members;
         if (res == SERVER_STATUS::OK)
         {
+            // Remove from current room 
             if (current_room_.size() != 0)
-            {
-                // Remove from current room
+            {   
                 rooms_->remove_from_room(current_room_, user_name, this);
             }
 
@@ -135,7 +136,6 @@ on_read(beast::error_code ec, std::size_t)
             current_user_ = user_name;
             current_room_ = room_name;
 
-            
             rooms_->get_members(current_room_, members);
         }
 
@@ -156,6 +156,9 @@ on_read(beast::error_code ec, std::size_t)
                                             this);
             current_user_ = "";
             current_room_ = "";
+
+            std::vector<std::string> members;
+            rooms_->get_members(current_room_, members);
         }
 
         resp = leave_room_resp(res);
@@ -207,7 +210,6 @@ void websocket_session::send(std::shared_ptr<std::string const> const& ss)
     // Post our work to the strand, this ensures
     // that the members of `this` will not be
     // accessed concurrently.
-
     net::post(
         ws_.get_executor(),
         beast::bind_front_handler(
