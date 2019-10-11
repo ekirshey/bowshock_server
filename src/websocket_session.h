@@ -3,6 +3,7 @@
 #include "net.h"
 #include "beast.h"
 #include "shared_state.h"
+#include "user_registry.h"
 #include "rooms.h"
 
 #include <cstdlib>
@@ -21,6 +22,7 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
 {
     beast::flat_buffer buffer_;
     websocket::stream<beast::tcp_stream> ws_;
+    std::shared_ptr<user_registry> user_registry_;
     std::shared_ptr<rooms> rooms_;
 
     // How do i know if the websocket has joined a room?
@@ -37,6 +39,7 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
 public:
     websocket_session(
         tcp::socket&& socket,
+        std::shared_ptr<user_registry> const& user_registry,
         std::shared_ptr<rooms> const& rooms);
 
     ~websocket_session();

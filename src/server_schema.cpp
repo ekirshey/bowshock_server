@@ -14,8 +14,12 @@ std::string status_string(const SERVER_STATUS& status)
         return "INVALID_ROOM_PASSWORD";
     case SERVER_STATUS::INVALID_USER:
         return "INVALID_USER";
+    case SERVER_STATUS::DUPLICATE_USER:
+        return "DUPLICATE_USER";
     case SERVER_STATUS::INVALID_USER_PASSWORD:
         return "INVALID_USER_PASSWORD";
+    case SERVER_STATUS::NO_LOGIN:
+        return "NO_LOGIN";
     default:
         return "UNKNOWN";
     }
@@ -55,6 +59,26 @@ nlohmann::json leave_room_resp(SERVER_STATUS result)
         {"type", MESSAGE_TYPES::LEAVE_ROOM},
         { "result" , result },
         { "result_str", status_string(result) }
+    };
+}
+
+nlohmann::json add_user_resp(const std::string& user_name, SERVER_STATUS result)
+{
+    return {
+        {"type" , MESSAGE_TYPES::ADD_NEW_USER},
+        {"user_name" , user_name},
+        {"result" , result},
+        {"result_str", status_string(result)}
+    };
+}
+
+nlohmann::json auth_user_resp(const std::string& user_name, SERVER_STATUS result)
+{
+    return {
+        {"type" , MESSAGE_TYPES::AUTHENTICATE_USER},
+        {"user_name" , user_name},
+        {"result" , result},
+        {"result_str", status_string(result)}
     };
 }
 

@@ -31,7 +31,6 @@ public:
    
     SERVER_STATUS add_member( const std::string& room_password,
                              const std::string& user_name,
-                             const std::string& user_password,
                              websocket_session* session );
 
     void remove_member( const std::string& user_name );
@@ -57,8 +56,6 @@ private:
 
     size_t session_count_;
 
-    // Username, Password
-    std::unordered_map< std::string, std::string > users_;
     std::unordered_map< std::string, std::vector< websocket_session* > > members_;
 };
 
@@ -75,7 +72,6 @@ public:
     SERVER_STATUS add_to_room(const std::string& room_name,
                               const std::string& room_password,
                               const std::string& user_name,
-                              const std::string& user_password,
                               websocket_session* session );
 
     SERVER_STATUS remove_from_room(const std::string& room_name,

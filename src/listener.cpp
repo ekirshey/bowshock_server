@@ -4,9 +4,11 @@
 
 listener::listener( net::io_context& ioc,
                     tcp::endpoint endpoint,
+                    std::shared_ptr<user_registry> const& user_registry,
                     std::shared_ptr<rooms> const& rooms)
     : ioc_(ioc)
     , acceptor_(ioc)
+    , user_registry_(user_registry)
     , rooms_(rooms)
 {
     beast::error_code ec;
@@ -73,6 +75,7 @@ void listener::on_accept(beast::error_code ec, tcp::socket socket)
         // Launch a new session for this connection
         std::make_shared<websocket_session>(
             std::move(socket),
+            user_registry_,
             rooms_ )->run();
 
     // The new connection gets its own strand

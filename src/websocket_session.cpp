@@ -4,8 +4,10 @@
 
 websocket_session::websocket_session( 
                                     tcp::socket&& socket,
+                                    std::shared_ptr<user_registry> const& user_registry,
                                     std::shared_ptr<rooms> const& rooms )
     : ws_(std::move(socket))
+    , user_registry_(user_registry)
     , rooms_(rooms)
     , current_user_("")
     , current_room_("")
@@ -68,19 +70,46 @@ on_read(beast::error_code ec, std::size_t)
     // Make the business logic class!
     // Convert message to json
     auto body = nlohmann::json::parse(data);
+
     // MessageTypes
-    std::cout << " Parsing received message " << std::endl;
-    if (body.at("message_type") == MESSAGE_TYPES::CREATE_ROOM)
+    if (body.at("message_type") == MESSAGE_TYPES::ADD_NEW_USER || 
+        body.at("message_type") == MESSAGE_TYPES::AUTHENTICATE_USER)
+    {
+        nlohmann::json resp;
+        std::string user_name = body.at("user_name");
+        std::string user_password = body.at("user_password");
+
+        SERVER_STATUS res;
+        if ( body.at("message_type") == MESSAGE_TYPES::ADD_NEW_USER )
+            res = user_registry_->add_new_user(user_name, user_password);
+        else 
+            res = user_registry_->authenticate_user(user_name, user_password);
+
+        if (res == SERVER_STATUS::OK) 
+        {
+            current_user_ = user_name;
+        }
+        std::cout << (int)res << std::endl;
+        if (body.at("message_type") == MESSAGE_TYPES::ADD_NEW_USER)
+            resp = add_user_resp(user_name, res);
+        else
+            resp = add_user_resp(user_name, res);
+
+        auto const ss = std::make_shared<std::string const>(std::move(resp.dump()));
+        send(ss);
+
+    }
+    else if (body.at("message_type") == MESSAGE_TYPES::CREATE_ROOM)
     {
         nlohmann::json resp;
         std::string room_name = body.at("room_name");
         std::string room_password = body.at("room_password");
         std::string user_name = body.at("user_name");
-        std::string user_password = body.at("user_password");
+        std::string admin_password = body.at("admin_password");
         auto res = rooms_->create_room(room_name,
             room_password,
             user_name,
-            user_password);
+            admin_password);
 
         if (res == SERVER_STATUS::OK)
         {
@@ -93,7 +122,6 @@ on_read(beast::error_code ec, std::size_t)
             auto res = rooms_->add_to_room(room_name,
                 room_password,
                 user_name,
-                user_password,
                 this);
 
             if (res == SERVER_STATUS::OK)
@@ -115,11 +143,9 @@ on_read(beast::error_code ec, std::size_t)
         std::string room_name = body.at("room_name");
         std::string room_password = body.at("room_password");
         std::string user_name = body.at("user_name");
-        std::string user_password = body.at("user_password");
         auto res = rooms_->add_to_room(room_name,
             room_password,
             user_name,
-            user_password,
             this);
 
         std::cout << "Add to room result: " << (int)res << std::endl;

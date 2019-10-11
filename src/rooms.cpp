@@ -29,7 +29,6 @@ room::room( room& r )
     admin_ = r.admin_;
     room_password_ = r.room_password_;
     session_count_ = r.session_count_;
-    users_ = r.users_;
     members_ = r.members_;
 }
 
@@ -40,40 +39,28 @@ room& room::operator=( room& r )
     admin_ = r.admin_;
     room_password_ = r.room_password_;
     session_count_ = r.session_count_;
-    users_ = r.users_;
     members_ = r.members_;
 
     return *this;
 }
 
-/*
-If the user isn't in the set add it
-Otherwise check for the password and add new session
-*/
-SERVER_STATUS room::add_member( const std::string& room_password,
+SERVER_STATUS room::add_member(const std::string& room_password,
                                const std::string& user_name,
-                               const std::string& user_password,
                                websocket_session* session )
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if ( room_password == room_password_ )
-    {     
-        if (users_.find(user_name) != users_.end())
+    {
+        if (members_.find(user_name) != members_.end())
         {
-            if (users_[user_name] != user_password)
-            {
-                return SERVER_STATUS::INVALID_USER_PASSWORD;
-            }
             members_[user_name].emplace_back( session );
         }
         else
         {
-            // Create user
-            users_[user_name] = user_password;
             members_[user_name] = { session };
         }
-        
+
         session_count_++;
         
         return SERVER_STATUS::OK;
@@ -105,9 +92,7 @@ void room::remove_session( const std::string& user_name,
         // If member has no more sessions, remove it
         if (members_[user_name].size() == 0) {
             members_.erase(user_name);
-            users_.erase(user_name);
         }
-
     }
 }
 
@@ -181,7 +166,6 @@ SERVER_STATUS rooms::create_room( const std::string& room_name,
 SERVER_STATUS rooms::add_to_room( const std::string& room_name,
                                  const std::string& room_password,
                                  const std::string& user_name,
-                                 const std::string& user_password,
                                  websocket_session* session )
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
@@ -191,7 +175,6 @@ SERVER_STATUS rooms::add_to_room( const std::string& room_name,
 
     auto res = rooms_[room_name].add_member(room_password, 
                                             user_name,
-                                            user_password,
                                             session );
 
     // Inform all other members of the room
